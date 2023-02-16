@@ -1,4 +1,6 @@
 github.com/go-http-utils/headers v0.0.0-20181008091004-fed159eddc2a h1:v6zMvHuY9yue4+QkG/HQ/W67wvtQmWJ4SDo9aK/GIno=
 github.com/go-http-utils/headers v0.0.0-20181008091004-fed159eddc2a/go.mod h1:I79BieaU4fxrw4LMXby6q5OS9XnoR9UIKLOzDFjUmuw=
+github.com/larksuite/oapi-sdk-go/v3 v3.0.17 h1:ucSEBWlJv2fpin4dLAcfXUotcHlMti8jVOaB8Vv9Y2M=
+github.com/larksuite/oapi-sdk-go/v3 v3.0.17/go.mod h1:FKi8vBgtkBt/xNRQUwdWvoDmsPh7/wP75Sn5IBIBQLk=
 github.com/tencentyun/scf-go-lib v0.0.0-20211123032342-f972dcd16ff6 h1:5owXVztD4wNP6bhJzA5UNQyYsIKk5YWbA2EJnnMD/sg=
 github.com/tencentyun/scf-go-lib v0.0.0-20211123032342-f972dcd16ff6/go.mod h1:K3DbqPpP2WE/9MWokWWzgFZcbgtMb9Wd5CYk9AAbEN8=
