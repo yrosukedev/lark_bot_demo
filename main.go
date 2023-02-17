@@ -18,28 +18,40 @@ func main() {
 }
 
 func httpHandler(ctx context.Context, httpEvent scf.APIGatewayProxyRequest) (resp scf.APIGatewayProxyResponse, err error) {
+	InfoLogger.Printf("[httpHandler] begin http handler")
+
 	faasCtx, ok := functioncontext.FromContext(ctx)
-	if ok {
-		fmt.Printf("%+v", faasCtx)
+	if !ok {
+		ErrorLogger.Printf("[show context] failed to convert FunctionContext from context.")
+		return buildAPIGatewayProxyResponse(http.StatusInternalServerError, "failed to convert FunctionContext from context"), nil
 	}
 
-	fmt.Printf("%+v", httpEvent)
+	DebugLogger.Printf("[show context] Function Context: %+v", faasCtx)
 
 	faasCtxMsg, err := marshalEntity(faasCtx)
 	if err != nil {
+		ErrorLogger.Printf("[httpHandler] marshal context failed, error: %+v", err)
 		return buildAPIGatewayProxyResponse(http.StatusInternalServerError, "marshal context failed"), nil
 	}
 
+	DebugLogger.Printf("[show http event] HTTP Event: %+v", httpEvent)
+
 	httpEventMsg, err := marshalEntity(httpEvent)
 	if err != nil {
+		ErrorLogger.Printf("[show http event] marshal httpEvent failed, error: %+v", err)
 		return buildAPIGatewayProxyResponse(http.StatusInternalServerError, "marshal http event failed"), nil
 	}
 
+	InfoLogger.Printf("[send message] before sending message to lark, context: %v, http event: %v", faasCtxMsg, httpEventMsg)
+
 	if err := sendMessageToLark(ctx, fmt.Sprintf("context: %v, http event: %v", faasCtxMsg, httpEventMsg)); err != nil {
+		ErrorLogger.Printf("[httpHandler] sending message to lark failed, error: %+v", err)
 		return buildAPIGatewayProxyResponse(http.StatusInternalServerError, err.Error()), nil
 	}
 
-	return buildAPIGatewayProxyResponse(http.StatusOK, "{}"), nil
+	InfoLogger.Printf("[send message] after sending message to lark")
+
+	return buildAPIGatewayProxyResponse(http.StatusOK, ""), nil
 }
 
 func buildAPIGatewayProxyResponse(statusCode int, msg string) scf.APIGatewayProxyResponse {
