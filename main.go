@@ -81,7 +81,14 @@ func marshalEntity(entity any) (string, error) {
 func sendMessageToLark(ctx context.Context, msg string) error {
 	larkClient := lark.NewClient(larkAppId, larkAppSecret)
 
-	content := larkim.NewTextMsgBuilder().Text(msg).Build()
+	content, err := marshalEntity(map[string]string{
+		"text": msg,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal msg to json format content, %+v", err)
+	}
+
+	DebugLogger.Printf("[send message to lark] content: %v", content)
 
 	msgBody := larkim.NewCreateMessageReqBodyBuilder().
 		ReceiveId(larkReceiverUserId).
