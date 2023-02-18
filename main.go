@@ -104,8 +104,12 @@ func sendMessageToLark(ctx context.Context, msg string) error {
 		return err
 	}
 
-	if resp.StatusCode != 0 {
-		return fmt.Errorf("status code: %v, message: %v", resp.StatusCode, resp.Msg)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("status code: %v, code: %v, message: %v", resp.StatusCode, resp.Code, resp.Msg)
+	}
+
+	if resp.Code != 0 {
+		return fmt.Errorf("status code: %v, code: %v, message: %v", resp.StatusCode, resp.Code, resp.Msg)
 	}
 
 	return nil
