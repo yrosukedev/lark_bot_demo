@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"github.com/go-http-utils/headers"
 	lark "github.com/larksuite/oapi-sdk-go/v3"
+	larkevent "github.com/larksuite/oapi-sdk-go/v3/event"
+	"github.com/larksuite/oapi-sdk-go/v3/event/dispatcher"
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
+	larkvc "github.com/larksuite/oapi-sdk-go/v3/service/vc/v1"
 	"github.com/tencentyun/scf-go-lib/cloudevents/scf"
 	"github.com/tencentyun/scf-go-lib/cloudfunction"
 	"github.com/tencentyun/scf-go-lib/functioncontext"
 	"net/http"
+	"strings"
 )
 
 func main() {
@@ -28,30 +32,47 @@ func httpHandler(ctx context.Context, httpEvent scf.APIGatewayProxyRequest) (res
 
 	DebugLogger.Printf("[show context] Function Context: %+v", faasCtx)
 
-	faasCtxMsg, err := marshalEntity(faasCtx)
-	if err != nil {
-		ErrorLogger.Printf("[httpHandler] marshal context failed, error: %+v", err)
-		return buildAPIGatewayProxyResponse(http.StatusInternalServerError, "marshal context failed"), nil
-	}
-
 	DebugLogger.Printf("[show http event] HTTP Event: %+v", httpEvent)
 
-	httpEventMsg, err := marshalEntity(httpEvent)
-	if err != nil {
-		ErrorLogger.Printf("[show http event] marshal httpEvent failed, error: %+v", err)
-		return buildAPIGatewayProxyResponse(http.StatusInternalServerError, "marshal http event failed"), nil
+	eventHandler := dispatcher.
+		NewEventDispatcher(larkVerificationToken, larkEventEncryptKey).
+		OnP2MeetingAllMeetingEndedV1(func(ctx context.Context, event *larkvc.P2MeetingAllMeetingEndedV1) error {
+
+			InfoLogger.Printf("[eventHandler OnP2MeetingAllMeetingEndedV1] begin event handler")
+
+			meetingEventMsg, err := marshalEntity(event)
+			if err != nil {
+				ErrorLogger.Printf("[eventHandler OnP2MeetingAllMeetingEndedV1] marshal event vc.meeting.all_meeting_ended_v1 failed, error: %+v", err)
+				return fmt.Errorf("marshal event vc.meeting.all_meeting_ended_v1 failed, error: %+v", err)
+			}
+
+			InfoLogger.Printf("[eventHandler OnP2MeetingAllMeetingEndedV1] before sending message to lark, lark event: %v", meetingEventMsg)
+
+			if err := sendMessageToLark(ctx, fmt.Sprintf("lark event: %v", meetingEventMsg)); err != nil {
+				ErrorLogger.Printf("[httpHandler] sending message to lark failed, error: %+v", err)
+				return fmt.Errorf("sending message to lark failed, error: %+v", err)
+			}
+
+			InfoLogger.Printf("[eventHandler OnP2MeetingAllMeetingEndedV1] after sending message to lark")
+
+			return nil
+		})
+
+	InfoLogger.Printf("[httpHandler] lark event handler created")
+
+	larkEventReq := &larkevent.EventReq{
+		Header:     larkEventHeadersFrom(httpEvent.Headers),
+		RequestURI: httpEvent.Path,
+		Body:       []byte(httpEvent.Body),
 	}
 
-	InfoLogger.Printf("[send message] before sending message to lark, context: %v, http event: %v", faasCtxMsg, httpEventMsg)
+	InfoLogger.Printf("[httpHandler] before handling lark request, request: %+v", larkEventReq)
 
-	if err := sendMessageToLark(ctx, fmt.Sprintf("context: %v, http event: %v", faasCtxMsg, httpEventMsg)); err != nil {
-		ErrorLogger.Printf("[httpHandler] sending message to lark failed, error: %+v", err)
-		return buildAPIGatewayProxyResponse(http.StatusInternalServerError, err.Error()), nil
-	}
+	larkResp := eventHandler.Handle(ctx, larkEventReq)
 
-	InfoLogger.Printf("[send message] after sending message to lark")
+	InfoLogger.Printf("[httpHandler] after handling lark request, response: %+v", larkResp)
 
-	return buildAPIGatewayProxyResponse(http.StatusOK, ""), nil
+	return buildAPIGatewayProxyResponseWithLarkEventResponse(larkResp), nil
 }
 
 func buildAPIGatewayProxyResponse(statusCode int, msg string) scf.APIGatewayProxyResponse {
@@ -69,6 +90,15 @@ func buildAPIGatewayProxyResponse(statusCode int, msg string) scf.APIGatewayProx
 			headers.ContentType: "application/json",
 		},
 		Body:            string(bodyData),
+		IsBase64Encoded: false,
+	}
+}
+
+func buildAPIGatewayProxyResponseWithLarkEventResponse(larkEventResp *larkevent.EventResp) scf.APIGatewayProxyResponse {
+	return scf.APIGatewayProxyResponse{
+		StatusCode:      larkEventResp.StatusCode,
+		Headers:         larkEventHeadersTo(larkEventResp.Header),
+		Body:            string(larkEventResp.Body),
 		IsBase64Encoded: false,
 	}
 }
@@ -113,4 +143,31 @@ func sendMessageToLark(ctx context.Context, msg string) error {
 	}
 
 	return nil
+}
+
+func larkEventHeadersFrom(headers map[string]string) map[string][]string {
+	larkHeaders := make(map[string][]string)
+
+	for k, v := range headers {
+		values := strings.Split(v, ",")
+
+		var trimedValues []string
+		for _, v := range values {
+			trimedValues = append(trimedValues, strings.TrimSpace(v))
+		}
+
+		larkHeaders[k] = trimedValues
+	}
+
+	return larkHeaders
+}
+
+func larkEventHeadersTo(larkHeaders map[string][]string) map[string]string {
+	headers := make(map[string]string)
+
+	for k, v := range larkHeaders {
+		headers[k] = strings.Join(v, ", ")
+	}
+
+	return headers
 }
