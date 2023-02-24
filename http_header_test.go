@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
@@ -13,6 +14,16 @@ func TestHttpHeaderBuild(t *testing.T) {
 	values := header.Values("key 1")
 	expected := []string{"value1", "value2"}
 	if !reflect.DeepEqual(values, expected) {
+		t.Fail()
+	}
+}
+
+func TestHttpHeaderGet(t *testing.T) {
+	header := make(http.Header)
+
+	header.Set("x-lark-signature", "123")
+	fmt.Printf("header: %+v\n", header)
+	if header["X-Lark-Signature"][0] != "123" {
 		t.Fail()
 	}
 }
