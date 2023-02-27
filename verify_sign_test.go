@@ -20,6 +20,9 @@ func TestVerifySign(t *testing.T) {
 	plainBody := string(plainBodyData)
 	fmt.Printf("body: %v\n", plainBody)
 
+	plainBody = fmt.Sprintf("{\"encrypt\":\"%v\"}", encryptBody)
+	fmt.Printf("body: %v\n", plainBody)
+
 	targetSign := larkevent.Signature(timestamp, nonce, larkEventEncryptKey, plainBody)
 	fmt.Printf("target sign: %v\n", targetSign)
 

@@ -18,12 +18,22 @@ func TestHttpHeaderBuild(t *testing.T) {
 	}
 }
 
-func TestHttpHeaderGet(t *testing.T) {
+func TestHttpHeaderSet(t *testing.T) {
 	header := make(http.Header)
 
 	header.Set("x-lark-signature", "123")
 	fmt.Printf("header: %+v\n", header)
 	if header["X-Lark-Signature"][0] != "123" {
+		t.Fail()
+	}
+}
+
+func TestHttpHeaderGet(t *testing.T) {
+	header := make(http.Header)
+
+	header["x-lark-signature"] = []string{"123"}
+	fmt.Printf("header: %+v\n", header)
+	if header.Get("X-Lark-Signature") != "123" {
 		t.Fail()
 	}
 }

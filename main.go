@@ -145,24 +145,21 @@ func sendMessageToLark(ctx context.Context, msg string) error {
 	return nil
 }
 
-func larkEventHeadersFrom(headers map[string]string) map[string][]string {
-	larkHeaders := make(map[string][]string)
+func larkEventHeadersFrom(headers map[string]string) http.Header {
+	larkHeaders := make(http.Header)
 
 	for k, v := range headers {
 		values := strings.Split(v, ",")
 
-		var trimedValues []string
 		for _, v := range values {
-			trimedValues = append(trimedValues, strings.TrimSpace(v))
+			larkHeaders.Add(k, strings.TrimSpace(v))
 		}
-
-		larkHeaders[k] = trimedValues
 	}
 
 	return larkHeaders
 }
 
-func larkEventHeadersTo(larkHeaders map[string][]string) map[string]string {
+func larkEventHeadersTo(larkHeaders http.Header) map[string]string {
 	headers := make(map[string]string)
 
 	for k, v := range larkHeaders {
