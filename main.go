@@ -56,6 +56,27 @@ func httpHandler(ctx context.Context, httpEvent scf.APIGatewayProxyRequest) (res
 			InfoLogger.Printf("[eventHandler OnP2MeetingAllMeetingEndedV1] after sending message to lark")
 
 			return nil
+		}).
+		OnP2MeetingEndedV1(func(ctx context.Context, event *larkvc.P2MeetingEndedV1) error {
+
+			InfoLogger.Printf("[eventHandler OnP2MeetingEndedV1] begin event handler")
+
+			meetingEventMsg, err := marshalEntity(event)
+			if err != nil {
+				ErrorLogger.Printf("[eventHandler OnP2MeetingEndedV1] marshal event vc.meeting.meeting_ended_v1 failed, error: %+v", err)
+				return fmt.Errorf("marshal event vc.meeting.all_meeting_ended_v1 failed, error: %+v", err)
+			}
+
+			InfoLogger.Printf("[eventHandler OnP2MeetingEndedV1] before sending message to lark, lark event: %v", meetingEventMsg)
+
+			if err := sendMessageToLark(ctx, fmt.Sprintf("lark event: %v", meetingEventMsg)); err != nil {
+				ErrorLogger.Printf("[httpHandler] sending message to lark failed, error: %+v", err)
+				return fmt.Errorf("sending message to lark failed, error: %+v", err)
+			}
+
+			InfoLogger.Printf("[eventHandler OnP2MeetingEndedV1] after sending message to lark")
+
+			return nil
 		})
 
 	InfoLogger.Printf("[httpHandler] lark event handler created")
